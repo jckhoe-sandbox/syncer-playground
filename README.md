@@ -2,6 +2,10 @@
 
 A demonstration of bidirectional data synchronization using gRPC, PostgreSQL, and Redis. Also to demonstrate how bad AI is at these challenging technical implementation, to then raise a PR to fix it all.
 
+## State
+
+- Stop project canot be proceeded, AI not able to fix this repo or even get it remotely working after the tagged `vibev1`, loop steps and failures.
+
 ## Project Structure
 
 - `cmd/postgres-only/`: Server implementation using only PostgreSQL
