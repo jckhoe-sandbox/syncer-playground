@@ -7,7 +7,12 @@ CLIENT_APP := client
 VERSION := v0.1.0
 LDFLAGS := -ldflags "-X main.AppVersion=$(VERSION)"
 
-.PHONY: all build clean run test proto
+# Docker image names
+DOCKER_REGISTRY := localhost
+POSTGRES_IMAGE := $(DOCKER_REGISTRY)/$(POSTGRES_SERVER_APP)
+POSTGRES_REDIS_IMAGE := $(DOCKER_REGISTRY)/$(POSTGRES_REDIS_SERVER_APP)
+
+.PHONY: all build clean run test proto docker docker-postgres docker-postgres-redis
 
 all: clean build
 
@@ -42,3 +47,22 @@ proto:
 		--go-grpc_out=pkg/chat \
 		--go-grpc_opt=paths=source_relative \
 		proto/chat.proto
+
+# Docker build commands
+docker: docker-postgres docker-postgres-redis
+
+docker-postgres:
+	$(DOCKER) build \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg APP_NAME=$(POSTGRES_SERVER_APP) \
+		-t $(POSTGRES_IMAGE):$(VERSION) \
+		-t $(POSTGRES_IMAGE):latest \
+		.
+
+docker-postgres-redis:
+	$(DOCKER) build \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg APP_NAME=$(POSTGRES_REDIS_SERVER_APP) \
+		-t $(POSTGRES_REDIS_IMAGE):$(VERSION) \
+		-t $(POSTGRES_REDIS_IMAGE):latest \
+		.

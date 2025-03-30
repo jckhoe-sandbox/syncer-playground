@@ -16,8 +16,11 @@ A demonstration of bidirectional data synchronization using gRPC, PostgreSQL, an
 - PostgreSQL
 - Redis (for the postgres-redis version)
 - Protocol Buffers compiler (protoc)
+- Docker (optional, for containerized deployment)
 
 ## Running the Application
+
+### Local Development
 
 1. Start PostgreSQL:
 ```bash
@@ -48,9 +51,47 @@ make run-postgres-redis
 make run-client
 ```
 
+### Docker Deployment
+
+1. Build Docker images:
+```bash
+# Build both server images
+make docker
+
+# Or build individual images
+make docker-postgres
+make docker-postgres-redis
+```
+
+2. Run the containers:
+```bash
+# PostgreSQL-only version
+docker run -d \
+  --name postgres-only \
+  -p 50051:50051 \
+  -e POSTGRES_HOST=postgres \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  --network syncer-network \
+  localhost/postgres-only:latest
+
+# PostgreSQL + Redis version
+docker run -d \
+  --name postgres-redis \
+  -p 50052:50051 \
+  -e POSTGRES_HOST=postgres \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e REDIS_HOST=redis \
+  -e REDIS_PORT=6379 \
+  --network syncer-network \
+  localhost/postgres-redis:latest
+```
+
 ## Features
 
 - Bidirectional streaming using gRPC
 - PostgreSQL database integration
 - Redis event synchronization (postgres-redis version)
 - Automatic schema migration
+- Docker support for containerized deployment
