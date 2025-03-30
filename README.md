@@ -10,6 +10,7 @@ A demonstration of bidirectional data synchronization using gRPC, PostgreSQL, an
 - `proto/`: Protocol buffer definitions
 - `pkg/chat/`: Generated protocol buffer code
 - `pkg/config/`: Configuration management package
+- `misc/`: Docker Compose and deployment configurations
 
 ## Prerequisites
 
@@ -17,7 +18,7 @@ A demonstration of bidirectional data synchronization using gRPC, PostgreSQL, an
 - PostgreSQL
 - Redis (for the postgres-redis version)
 - Protocol Buffers compiler (protoc)
-- Docker (optional, for containerized deployment)
+- Docker and Docker Compose (optional, for containerized deployment)
 
 ## Configuration
 
@@ -84,6 +85,40 @@ make run-client
 
 ### Docker Deployment
 
+#### Using Docker Compose (Recommended)
+
+1. Navigate to the misc directory:
+```bash
+cd misc
+```
+
+2. Copy the environment file:
+```bash
+cp .env.example .env
+```
+
+3. Start all services:
+```bash
+docker compose up -d
+```
+
+This will start:
+- PostgreSQL-only server with its own database on port 50051
+- PostgreSQL + Redis server with its own database and Redis on port 50052
+- A test client that can connect to both servers
+
+4. View logs:
+```bash
+docker compose logs -f
+```
+
+5. Stop all services:
+```bash
+docker compose down
+```
+
+#### Using Individual Docker Commands
+
 1. Build Docker images:
 ```bash
 # Build both server images
@@ -127,3 +162,4 @@ docker run -d \
 - Automatic schema migration
 - Docker support for containerized deployment
 - Modern configuration management with environment variables and .env file support
+- Docker Compose setup with separate infrastructure for each server version

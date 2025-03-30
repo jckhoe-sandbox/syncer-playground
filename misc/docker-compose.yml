@@ -1,0 +1,128 @@
+version: '3.8'
+
+services:
+  # PostgreSQL-only server and its database
+  postgres-only-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chat
+    volumes:
+      - postgres-only-data:/var/lib/postgresql/data
+    networks:
+      - postgres-only-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-only-server:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        - VERSION=v0.1.0
+        - APP_NAME=postgres-only
+    environment:
+      - SYNCER_POSTGRES_HOST=postgres-only-db
+      - SYNCER_POSTGRES_PORT=5432
+      - SYNCER_POSTGRES_USER=postgres
+      - SYNCER_POSTGRES_PASSWORD=postgres
+      - SYNCER_POSTGRES_DBNAME=chat
+      - SYNCER_POSTGRES_SSLMODE=disable
+      - SYNCER_SERVER_PORT=50051
+    ports:
+      - "50051:50051"
+    depends_on:
+      postgres-only-db:
+        condition: service_healthy
+    networks:
+      - postgres-only-network
+
+  # PostgreSQL + Redis server and its infrastructure
+  postgres-redis-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chat
+    volumes:
+      - postgres-redis-data:/var/lib/postgresql/data
+    networks:
+      - postgres-redis-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-redis-redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    networks:
+      - postgres-redis-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-redis-server:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        - VERSION=v0.1.0
+        - APP_NAME=postgres-redis
+    environment:
+      - SYNCER_POSTGRES_HOST=postgres-redis-db
+      - SYNCER_POSTGRES_PORT=5432
+      - SYNCER_POSTGRES_USER=postgres
+      - SYNCER_POSTGRES_PASSWORD=postgres
+      - SYNCER_POSTGRES_DBNAME=chat
+      - SYNCER_POSTGRES_SSLMODE=disable
+      - SYNCER_REDIS_HOST=postgres-redis-redis
+      - SYNCER_REDIS_PORT=6379
+      - SYNCER_REDIS_PASSWORD=
+      - SYNCER_REDIS_DB=0
+      - SYNCER_SERVER_PORT=50051
+    ports:
+      - "50052:50051"
+    depends_on:
+      postgres-redis-db:
+        condition: service_healthy
+      postgres-redis-redis:
+        condition: service_healthy
+    networks:
+      - postgres-redis-network
+
+  # Test client
+  client:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        - VERSION=v0.1.0
+        - APP_NAME=client
+    environment:
+      - SYNCER_SERVER_PORT=50051
+    networks:
+      - postgres-only-network
+      - postgres-redis-network
+    depends_on:
+      - postgres-only-server
+      - postgres-redis-server
+
+networks:
+  postgres-only-network:
+    driver: bridge
+  postgres-redis-network:
+    driver: bridge
+
+volumes:
+  postgres-only-data:
+  postgres-redis-data:
+  redis-data: 
