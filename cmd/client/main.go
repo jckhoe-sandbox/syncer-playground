@@ -1,52 +1,68 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
+	"context"
+	"flag"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
+	"time"
 
-	"github.com/jckhoe-sandbox/syncer-playground/internal/client"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	pb "github.com/jckhoe-sandbox/syncer-playground/pkg/chat"
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		log.Fatal("Usage: client <username>")
-	}
-	username := os.Args[1]
+	serverAddr := flag.String("addr", "localhost:50051", "Server address")
+	flag.Parse()
 
-	chatClient, err := client.NewChatClient("localhost:50051", username)
+	// Connect to server
+	conn, err := grpc.Dial(*serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
-	}
-	defer chatClient.Close()
-
-	if err := chatClient.Connect(); err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
+	defer conn.Close()
 
-	go chatClient.ReceiveMessages()
+	client := pb.NewChatServiceClient(conn)
+	ctx := context.Background()
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	// Create a stream
+	stream, err := client.ChatStream(ctx)
+	if err != nil {
+		log.Fatalf("Failed to create stream: %v", err)
+	}
 
-	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Printf("Connected as %s. Type messages (press Ctrl+C to exit):\n", username)
-
-	for {
-		select {
-		case <-sigChan:
-			fmt.Println("\nShutting down...")
-			return
-		default:
-			if scanner.Scan() {
-				message := scanner.Text()
-				if err := chatClient.SendMessage(message); err != nil {
-					log.Printf("Failed to send message: %v", err)
-				}
+	// Start a goroutine to receive messages
+	go func() {
+		for {
+			msg, err := stream.Recv()
+			if err != nil {
+				log.Printf("Error receiving message: %v", err)
+				return
 			}
+			log.Printf("Received message from %s: %s", msg.Sender, msg.Content)
 		}
+	}()
+
+	// Send messages
+	for i := 0; i < 5; i++ {
+		msg := &pb.ChatMessage{
+			Content:   "Hello from client!",
+			Sender:    "Client",
+			Timestamp: time.Now().Unix(),
+		}
+
+		if err := stream.Send(msg); err != nil {
+			log.Printf("Error sending message: %v", err)
+			return
+		}
+
+		log.Printf("Sent message: %s", msg.Content)
+		time.Sleep(time.Second)
+	}
+
+	// Close the stream
+	if err := stream.CloseSend(); err != nil {
+		log.Printf("Error closing stream: %v", err)
 	}
 }
