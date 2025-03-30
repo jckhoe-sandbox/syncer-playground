@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net"
 
@@ -13,6 +14,7 @@ import (
 	"gorm.io/gorm"
 
 	pb "github.com/jckhoe-sandbox/syncer-playground/pkg/chat"
+	"github.com/jckhoe-sandbox/syncer-playground/pkg/config"
 )
 
 type server struct {
@@ -90,9 +92,14 @@ func (s *server) ChatStream(stream pb.ChatService_ChatStreamServer) error {
 }
 
 func main() {
+	// Load configuration
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
 	// Connect to PostgreSQL
-	dsn := "host=localhost user=postgres password=postgres dbname=chat port=5432 sslmode=disable"
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(cfg.Postgres.GetDSN()), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -104,9 +111,9 @@ func main() {
 
 	// Connect to Redis
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
+		Addr:     cfg.Redis.GetAddr(),
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
 	})
 
 	// Test Redis connection
@@ -116,7 +123,7 @@ func main() {
 	}
 
 	// Create gRPC server
-	lis, err := net.Listen("tcp", ":50051")
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.Port))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}

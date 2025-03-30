@@ -9,6 +9,7 @@ A demonstration of bidirectional data synchronization using gRPC, PostgreSQL, an
 - `cmd/client/`: Test client application
 - `proto/`: Protocol buffer definitions
 - `pkg/chat/`: Generated protocol buffer code
+- `pkg/config/`: Configuration management package
 
 ## Prerequisites
 
@@ -17,6 +18,36 @@ A demonstration of bidirectional data synchronization using gRPC, PostgreSQL, an
 - Redis (for the postgres-redis version)
 - Protocol Buffers compiler (protoc)
 - Docker (optional, for containerized deployment)
+
+## Configuration
+
+The application can be configured using environment variables or a `.env` file. All configuration options are prefixed with `SYNCER_`.
+
+### Environment Variables
+
+```bash
+# PostgreSQL Configuration
+SYNCER_POSTGRES_HOST=localhost
+SYNCER_POSTGRES_PORT=5432
+SYNCER_POSTGRES_USER=postgres
+SYNCER_POSTGRES_PASSWORD=postgres
+SYNCER_POSTGRES_DBNAME=chat
+SYNCER_POSTGRES_SSLMODE=disable
+
+# Redis Configuration (for postgres-redis version)
+SYNCER_REDIS_HOST=localhost
+SYNCER_REDIS_PORT=6379
+SYNCER_REDIS_PASSWORD=
+SYNCER_REDIS_DB=0
+
+# Server Configuration
+SYNCER_SERVER_PORT=50051
+```
+
+Copy `.env.example` to `.env` and modify the values as needed:
+```bash
+cp .env.example .env
+```
 
 ## Running the Application
 
@@ -69,9 +100,9 @@ make docker-postgres-redis
 docker run -d \
   --name postgres-only \
   -p 50051:50051 \
-  -e POSTGRES_HOST=postgres \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
+  -e SYNCER_POSTGRES_HOST=postgres \
+  -e SYNCER_POSTGRES_USER=postgres \
+  -e SYNCER_POSTGRES_PASSWORD=postgres \
   --network syncer-network \
   localhost/postgres-only:latest
 
@@ -79,11 +110,11 @@ docker run -d \
 docker run -d \
   --name postgres-redis \
   -p 50052:50051 \
-  -e POSTGRES_HOST=postgres \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e REDIS_HOST=redis \
-  -e REDIS_PORT=6379 \
+  -e SYNCER_POSTGRES_HOST=postgres \
+  -e SYNCER_POSTGRES_USER=postgres \
+  -e SYNCER_POSTGRES_PASSWORD=postgres \
+  -e SYNCER_REDIS_HOST=redis \
+  -e SYNCER_REDIS_PORT=6379 \
   --network syncer-network \
   localhost/postgres-redis:latest
 ```
@@ -95,3 +126,4 @@ docker run -d \
 - Redis event synchronization (postgres-redis version)
 - Automatic schema migration
 - Docker support for containerized deployment
+- Modern configuration management with environment variables and .env file support
