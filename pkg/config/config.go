@@ -8,65 +8,90 @@ import (
 )
 
 type Config struct {
-	Postgres PostgresConfig
-	Redis    RedisConfig
-	Server   ServerConfig
+	Postgres struct {
+		Host     string
+		Port     int
+		User     string
+		Password string
+		DBName   string
+		SSLMode  string
+	}
+	Redis struct {
+		Host     string
+		Port     int
+		Password string
+		DB       int
+	}
+	Server struct {
+		Port int
+	}
+	Replication struct {
+		Slot        string
+		Publication string
+	}
 }
 
-type PostgresConfig struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-	DBName   string
-	SSLMode  string
-}
-
-type RedisConfig struct {
-	Host     string
-	Port     int
-	Password string
-	DB       int
-}
-
-type ServerConfig struct {
-	Port int
+func (c *Config) GetPostgresDSN() string {
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		c.Postgres.Host,
+		c.Postgres.Port,
+		c.Postgres.User,
+		c.Postgres.Password,
+		c.Postgres.DBName,
+		c.Postgres.SSLMode,
+	)
 }
 
 func LoadConfig() (*Config, error) {
-	// Set default values
-	viper.SetDefault("postgres.host", "localhost")
-	viper.SetDefault("postgres.port", 5432)
-	viper.SetDefault("postgres.user", "postgres")
-	viper.SetDefault("postgres.password", "postgres")
-	viper.SetDefault("postgres.dbname", "chat")
-	viper.SetDefault("postgres.sslmode", "disable")
-
-	viper.SetDefault("redis.host", "localhost")
-	viper.SetDefault("redis.port", 6379)
-	viper.SetDefault("redis.password", "")
-	viper.SetDefault("redis.db", 0)
-
-	viper.SetDefault("server.port", 50051)
-
-	// Read from environment variables
-	viper.AutomaticEnv()
-	viper.SetEnvPrefix("SYNCER")
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-
-	// Read from .env file if it exists
 	viper.SetConfigName(".env")
 	viper.SetConfigType("env")
 	viper.AddConfigPath(".")
-	viper.AddConfigPath("./config")
+	viper.AddConfigPath("./misc")
+	viper.AutomaticEnv()
 
-	// Ignore errors if .env file doesn't exist
-	_ = viper.ReadInConfig()
+	// Set defaults
+	viper.SetDefault("SYNCER_POSTGRES_HOST", "localhost")
+	viper.SetDefault("SYNCER_POSTGRES_PORT", 5432)
+	viper.SetDefault("SYNCER_POSTGRES_USER", "postgres")
+	viper.SetDefault("SYNCER_POSTGRES_PASSWORD", "postgres")
+	viper.SetDefault("SYNCER_POSTGRES_DBNAME", "chat")
+	viper.SetDefault("SYNCER_POSTGRES_SSLMODE", "disable")
+	viper.SetDefault("SYNCER_REDIS_HOST", "localhost")
+	viper.SetDefault("SYNCER_REDIS_PORT", 6379)
+	viper.SetDefault("SYNCER_REDIS_PASSWORD", "")
+	viper.SetDefault("SYNCER_REDIS_DB", 0)
+	viper.SetDefault("SYNCER_SERVER_PORT", 50051)
+	viper.SetDefault("SYNCER_REPLICATION_SLOT", "syncer_slot")
+	viper.SetDefault("SYNCER_REPLICATION_PUBLICATION", "syncer_pub")
+
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return nil, fmt.Errorf("error reading config file: %w", err)
+		}
+	}
 
 	config := &Config{}
-	if err := viper.Unmarshal(config); err != nil {
-		return nil, fmt.Errorf("unable to decode config: %w", err)
-	}
+
+	// Load PostgreSQL configuration
+	config.Postgres.Host = viper.GetString("SYNCER_POSTGRES_HOST")
+	config.Postgres.Port = viper.GetInt("SYNCER_POSTGRES_PORT")
+	config.Postgres.User = viper.GetString("SYNCER_POSTGRES_USER")
+	config.Postgres.Password = viper.GetString("SYNCER_POSTGRES_PASSWORD")
+	config.Postgres.DBName = viper.GetString("SYNCER_POSTGRES_DBNAME")
+	config.Postgres.SSLMode = viper.GetString("SYNCER_POSTGRES_SSLMODE")
+
+	// Load Redis configuration
+	config.Redis.Host = viper.GetString("SYNCER_REDIS_HOST")
+	config.Redis.Port = viper.GetInt("SYNCER_REDIS_PORT")
+	config.Redis.Password = viper.GetString("SYNCER_REDIS_PASSWORD")
+	config.Redis.DB = viper.GetInt("SYNCER_REDIS_DB")
+
+	// Load server configuration
+	config.Server.Port = viper.GetInt("SYNCER_SERVER_PORT")
+
+	// Load replication configuration
+	config.Replication.Slot = viper.GetString("SYNCER_REPLICATION_SLOT")
+	config.Replication.Publication = viper.GetString("SYNCER_REPLICATION_PUBLICATION")
 
 	return config, nil
 }

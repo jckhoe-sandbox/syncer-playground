@@ -7,36 +7,39 @@ import (
 	"net"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/reflection"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
-	pb "github.com/jckhoe-sandbox/syncer-playground/pkg/chat"
-	"github.com/jckhoe-sandbox/syncer-playground/pkg/config"
+	"syncer-playground/pkg/chat"
+	"syncer-playground/pkg/config"
+	"syncer-playground/pkg/replication"
 )
 
 type server struct {
-	pb.UnimplementedChatServiceServer
-	db *gorm.DB
+	chat.UnimplementedChatServiceServer
+	db         *gorm.DB
+	replicator *replication.PostgresReplicator
 }
 
-func (s *server) ChatStream(stream pb.ChatService_ChatStreamServer) error {
+func (s *server) StreamDataChanges(req *chat.StreamDataChangesRequest, stream chat.ChatService_StreamDataChangesServer) error {
+	// Create a channel for data change events
+	eventChan := make(chan *chat.DataChangeEvent, 100)
+
+	// Start replication
+	if err := s.replicator.StartReplication(stream.Context(), eventChan); err != nil {
+		return fmt.Errorf("failed to start replication: %w", err)
+	}
+
+	// Send events to the client
 	for {
-		msg, err := stream.Recv()
-		if err != nil {
-			return err
-		}
-
-		// Save message to database
-		if err := s.db.Create(msg).Error; err != nil {
-			log.Printf("Error saving message: %v", err)
-			continue
-		}
-
-		// Send acknowledgment back to client
-		if err := stream.Send(msg); err != nil {
-			log.Printf("Error sending response: %v", err)
-			return err
+		select {
+		case event := <-eventChan:
+			if err := stream.Send(event); err != nil {
+				return fmt.Errorf("failed to send event: %w", err)
+			}
+		case <-stream.Context().Done():
+			return stream.Context().Err()
 		}
 	}
 }
@@ -49,14 +52,21 @@ func main() {
 	}
 
 	// Connect to PostgreSQL
-	db, err := gorm.Open(postgres.Open(cfg.Postgres.GetDSN()), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(cfg.GetPostgresDSN()), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// Auto migrate the schema
-	if err := db.AutoMigrate(&pb.ChatMessage{}); err != nil {
-		log.Fatalf("Failed to migrate database: %v", err)
+	// Create replication manager
+	replicator, err := replication.NewPostgresReplicator(cfg)
+	if err != nil {
+		log.Fatalf("Failed to create replicator: %v", err)
+	}
+	defer replicator.Close()
+
+	// Setup replication
+	if err := replicator.SetupReplication(context.Background()); err != nil {
+		log.Fatalf("Failed to setup replication: %v", err)
 	}
 
 	// Create gRPC server
@@ -66,9 +76,13 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterChatServiceServer(s, &server{db: db})
+	chat.RegisterChatServiceServer(s, &server{
+		db:         db,
+		replicator: replicator,
+	})
+	reflection.Register(s)
 
-	log.Printf("Server listening at %v", lis.Addr())
+	log.Printf("Server listening on port %d", cfg.Server.Port)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
