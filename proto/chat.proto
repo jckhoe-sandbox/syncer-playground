@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package chat;
+option go_package = "github.com/jckhoe-sandbox/syncer-playground/pkg/chat";
 
 service ChatService {
   rpc ChatStream (stream ChatMessage) returns (stream ChatMessage) {}
