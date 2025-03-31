@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: chat.proto
+// source: chat/chat.proto
 
 package chat
 
@@ -19,14 +19,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ChatService_ChatStream_FullMethodName = "/chat.ChatService/ChatStream"
+	ChatService_StreamDataChanges_FullMethodName = "/chat.ChatService/StreamDataChanges"
 )
 
 // ChatServiceClient is the client API for ChatService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChatServiceClient interface {
-	ChatStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[ChatMessage, ChatMessage], error)
+	StreamDataChanges(ctx context.Context, in *StreamDataChangesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DataChangeEvent], error)
 }
 
 type chatServiceClient struct {
@@ -37,24 +37,30 @@ func NewChatServiceClient(cc grpc.ClientConnInterface) ChatServiceClient {
 	return &chatServiceClient{cc}
 }
 
-func (c *chatServiceClient) ChatStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[ChatMessage, ChatMessage], error) {
+func (c *chatServiceClient) StreamDataChanges(ctx context.Context, in *StreamDataChangesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DataChangeEvent], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &ChatService_ServiceDesc.Streams[0], ChatService_ChatStream_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &ChatService_ServiceDesc.Streams[0], ChatService_StreamDataChanges_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[ChatMessage, ChatMessage]{ClientStream: stream}
+	x := &grpc.GenericClientStream[StreamDataChangesRequest, DataChangeEvent]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
 	return x, nil
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ChatService_ChatStreamClient = grpc.BidiStreamingClient[ChatMessage, ChatMessage]
+type ChatService_StreamDataChangesClient = grpc.ServerStreamingClient[DataChangeEvent]
 
 // ChatServiceServer is the server API for ChatService service.
 // All implementations must embed UnimplementedChatServiceServer
 // for forward compatibility.
 type ChatServiceServer interface {
-	ChatStream(grpc.BidiStreamingServer[ChatMessage, ChatMessage]) error
+	StreamDataChanges(*StreamDataChangesRequest, grpc.ServerStreamingServer[DataChangeEvent]) error
 	mustEmbedUnimplementedChatServiceServer()
 }
 
@@ -65,8 +71,8 @@ type ChatServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedChatServiceServer struct{}
 
-func (UnimplementedChatServiceServer) ChatStream(grpc.BidiStreamingServer[ChatMessage, ChatMessage]) error {
-	return status.Errorf(codes.Unimplemented, "method ChatStream not implemented")
+func (UnimplementedChatServiceServer) StreamDataChanges(*StreamDataChangesRequest, grpc.ServerStreamingServer[DataChangeEvent]) error {
+	return status.Errorf(codes.Unimplemented, "method StreamDataChanges not implemented")
 }
 func (UnimplementedChatServiceServer) mustEmbedUnimplementedChatServiceServer() {}
 func (UnimplementedChatServiceServer) testEmbeddedByValue()                     {}
@@ -89,12 +95,16 @@ func RegisterChatServiceServer(s grpc.ServiceRegistrar, srv ChatServiceServer) {
 	s.RegisterService(&ChatService_ServiceDesc, srv)
 }
 
-func _ChatService_ChatStream_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(ChatServiceServer).ChatStream(&grpc.GenericServerStream[ChatMessage, ChatMessage]{ServerStream: stream})
+func _ChatService_StreamDataChanges_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(StreamDataChangesRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ChatServiceServer).StreamDataChanges(m, &grpc.GenericServerStream[StreamDataChangesRequest, DataChangeEvent]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ChatService_ChatStreamServer = grpc.BidiStreamingServer[ChatMessage, ChatMessage]
+type ChatService_StreamDataChangesServer = grpc.ServerStreamingServer[DataChangeEvent]
 
 // ChatService_ServiceDesc is the grpc.ServiceDesc for ChatService service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -105,11 +115,10 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "ChatStream",
-			Handler:       _ChatService_ChatStream_Handler,
+			StreamName:    "StreamDataChanges",
+			Handler:       _ChatService_StreamDataChanges_Handler,
 			ServerStreams: true,
-			ClientStreams: true,
 		},
 	},
-	Metadata: "chat.proto",
+	Metadata: "chat/chat.proto",
 }

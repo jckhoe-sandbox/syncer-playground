@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package chat;
+option go_package = "github.com/jckhoe-sandbox/syncer-playground/pkg/chat";
+
+import "google/protobuf/timestamp.proto";
+
+service ChatService {
+  rpc StreamDataChanges(StreamDataChangesRequest) returns (stream DataChangeEvent) {}
+}
+
+message StreamDataChangesRequest {
+  repeated string tables = 1;
+}
+
+message DataChangeEvent {
+  Operation operation = 1;
+  string table = 2;
+  bytes data = 3;
+  bytes old_data = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+enum Operation {
+  OPERATION_UNKNOWN = 0;
+  OPERATION_INSERT = 1;
+  OPERATION_UPDATE = 2;
+  OPERATION_DELETE = 3;
+} 

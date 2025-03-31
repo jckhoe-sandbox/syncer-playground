@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/viper"
 )
@@ -95,14 +94,3 @@ func LoadConfig() (*Config, error) {
 
 	return config, nil
 }
-
-// GetDSN returns the PostgreSQL connection string
-func (c *PostgresConfig) GetDSN() string {
-	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode)
-}
-
-// GetAddr returns the Redis connection address
-func (c *RedisConfig) GetAddr() string {
-	return fmt.Sprintf("%s:%d", c.Host, c.Port)
-} 

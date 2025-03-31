@@ -2,13 +2,14 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: chat.proto
+// source: chat/chat.proto
 
 package chat
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -21,30 +22,80 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type ChatMessage struct {
+type Operation int32
+
+const (
+	Operation_OPERATION_UNKNOWN Operation = 0
+	Operation_OPERATION_INSERT  Operation = 1
+	Operation_OPERATION_UPDATE  Operation = 2
+	Operation_OPERATION_DELETE  Operation = 3
+)
+
+// Enum value maps for Operation.
+var (
+	Operation_name = map[int32]string{
+		0: "OPERATION_UNKNOWN",
+		1: "OPERATION_INSERT",
+		2: "OPERATION_UPDATE",
+		3: "OPERATION_DELETE",
+	}
+	Operation_value = map[string]int32{
+		"OPERATION_UNKNOWN": 0,
+		"OPERATION_INSERT":  1,
+		"OPERATION_UPDATE":  2,
+		"OPERATION_DELETE":  3,
+	}
+)
+
+func (x Operation) Enum() *Operation {
+	p := new(Operation)
+	*p = x
+	return p
+}
+
+func (x Operation) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Operation) Descriptor() protoreflect.EnumDescriptor {
+	return file_chat_chat_proto_enumTypes[0].Descriptor()
+}
+
+func (Operation) Type() protoreflect.EnumType {
+	return &file_chat_chat_proto_enumTypes[0]
+}
+
+func (x Operation) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Operation.Descriptor instead.
+func (Operation) EnumDescriptor() ([]byte, []int) {
+	return file_chat_chat_proto_rawDescGZIP(), []int{0}
+}
+
+type StreamDataChangesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Content       string                 `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
-	Sender        string                 `protobuf:"bytes,2,opt,name=sender,proto3" json:"sender,omitempty"`
-	Timestamp     int64                  `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Tables        []string               `protobuf:"bytes,1,rep,name=tables,proto3" json:"tables,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ChatMessage) Reset() {
-	*x = ChatMessage{}
-	mi := &file_chat_proto_msgTypes[0]
+func (x *StreamDataChangesRequest) Reset() {
+	*x = StreamDataChangesRequest{}
+	mi := &file_chat_chat_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ChatMessage) String() string {
+func (x *StreamDataChangesRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ChatMessage) ProtoMessage() {}
+func (*StreamDataChangesRequest) ProtoMessage() {}
 
-func (x *ChatMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_proto_msgTypes[0]
+func (x *StreamDataChangesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_chat_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -55,92 +106,168 @@ func (x *ChatMessage) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ChatMessage.ProtoReflect.Descriptor instead.
-func (*ChatMessage) Descriptor() ([]byte, []int) {
-	return file_chat_proto_rawDescGZIP(), []int{0}
+// Deprecated: Use StreamDataChangesRequest.ProtoReflect.Descriptor instead.
+func (*StreamDataChangesRequest) Descriptor() ([]byte, []int) {
+	return file_chat_chat_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *ChatMessage) GetContent() string {
+func (x *StreamDataChangesRequest) GetTables() []string {
 	if x != nil {
-		return x.Content
+		return x.Tables
+	}
+	return nil
+}
+
+type DataChangeEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Operation     Operation              `protobuf:"varint,1,opt,name=operation,proto3,enum=chat.Operation" json:"operation,omitempty"`
+	Table         string                 `protobuf:"bytes,2,opt,name=table,proto3" json:"table,omitempty"`
+	Data          []byte                 `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	OldData       []byte                 `protobuf:"bytes,4,opt,name=old_data,json=oldData,proto3" json:"old_data,omitempty"`
+	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DataChangeEvent) Reset() {
+	*x = DataChangeEvent{}
+	mi := &file_chat_chat_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DataChangeEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DataChangeEvent) ProtoMessage() {}
+
+func (x *DataChangeEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_chat_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DataChangeEvent.ProtoReflect.Descriptor instead.
+func (*DataChangeEvent) Descriptor() ([]byte, []int) {
+	return file_chat_chat_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *DataChangeEvent) GetOperation() Operation {
+	if x != nil {
+		return x.Operation
+	}
+	return Operation_OPERATION_UNKNOWN
+}
+
+func (x *DataChangeEvent) GetTable() string {
+	if x != nil {
+		return x.Table
 	}
 	return ""
 }
 
-func (x *ChatMessage) GetSender() string {
+func (x *DataChangeEvent) GetData() []byte {
 	if x != nil {
-		return x.Sender
+		return x.Data
 	}
-	return ""
+	return nil
 }
 
-func (x *ChatMessage) GetTimestamp() int64 {
+func (x *DataChangeEvent) GetOldData() []byte {
+	if x != nil {
+		return x.OldData
+	}
+	return nil
+}
+
+func (x *DataChangeEvent) GetTimestamp() *timestamppb.Timestamp {
 	if x != nil {
 		return x.Timestamp
 	}
-	return 0
+	return nil
 }
 
-var File_chat_proto protoreflect.FileDescriptor
+var File_chat_chat_proto protoreflect.FileDescriptor
 
-const file_chat_proto_rawDesc = "" +
+const file_chat_chat_proto_rawDesc = "" +
 	"\n" +
-	"\n" +
-	"chat.proto\x12\x04chat\"]\n" +
-	"\vChatMessage\x12\x18\n" +
-	"\acontent\x18\x01 \x01(\tR\acontent\x12\x16\n" +
-	"\x06sender\x18\x02 \x01(\tR\x06sender\x12\x1c\n" +
-	"\ttimestamp\x18\x03 \x01(\x03R\ttimestamp2G\n" +
-	"\vChatService\x128\n" +
-	"\n" +
-	"ChatStream\x12\x11.chat.ChatMessage\x1a\x11.chat.ChatMessage\"\x00(\x010\x01B6Z4github.com/jckhoe-sandbox/syncer-playground/pkg/chatb\x06proto3"
+	"\x0fchat/chat.proto\x12\x04chat\x1a\x1fgoogle/protobuf/timestamp.proto\"2\n" +
+	"\x18StreamDataChangesRequest\x12\x16\n" +
+	"\x06tables\x18\x01 \x03(\tR\x06tables\"\xbf\x01\n" +
+	"\x0fDataChangeEvent\x12-\n" +
+	"\toperation\x18\x01 \x01(\x0e2\x0f.chat.OperationR\toperation\x12\x14\n" +
+	"\x05table\x18\x02 \x01(\tR\x05table\x12\x12\n" +
+	"\x04data\x18\x03 \x01(\fR\x04data\x12\x19\n" +
+	"\bold_data\x18\x04 \x01(\fR\aoldData\x128\n" +
+	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp*d\n" +
+	"\tOperation\x12\x15\n" +
+	"\x11OPERATION_UNKNOWN\x10\x00\x12\x14\n" +
+	"\x10OPERATION_INSERT\x10\x01\x12\x14\n" +
+	"\x10OPERATION_UPDATE\x10\x02\x12\x14\n" +
+	"\x10OPERATION_DELETE\x10\x032]\n" +
+	"\vChatService\x12N\n" +
+	"\x11StreamDataChanges\x12\x1e.chat.StreamDataChangesRequest\x1a\x15.chat.DataChangeEvent\"\x000\x01B6Z4github.com/jckhoe-sandbox/syncer-playground/pkg/chatb\x06proto3"
 
 var (
-	file_chat_proto_rawDescOnce sync.Once
-	file_chat_proto_rawDescData []byte
+	file_chat_chat_proto_rawDescOnce sync.Once
+	file_chat_chat_proto_rawDescData []byte
 )
 
-func file_chat_proto_rawDescGZIP() []byte {
-	file_chat_proto_rawDescOnce.Do(func() {
-		file_chat_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_chat_proto_rawDesc), len(file_chat_proto_rawDesc)))
+func file_chat_chat_proto_rawDescGZIP() []byte {
+	file_chat_chat_proto_rawDescOnce.Do(func() {
+		file_chat_chat_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_chat_chat_proto_rawDesc), len(file_chat_chat_proto_rawDesc)))
 	})
-	return file_chat_proto_rawDescData
+	return file_chat_chat_proto_rawDescData
 }
 
-var file_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
-var file_chat_proto_goTypes = []any{
-	(*ChatMessage)(nil), // 0: chat.ChatMessage
+var file_chat_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_chat_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_chat_chat_proto_goTypes = []any{
+	(Operation)(0),                   // 0: chat.Operation
+	(*StreamDataChangesRequest)(nil), // 1: chat.StreamDataChangesRequest
+	(*DataChangeEvent)(nil),          // 2: chat.DataChangeEvent
+	(*timestamppb.Timestamp)(nil),    // 3: google.protobuf.Timestamp
 }
-var file_chat_proto_depIdxs = []int32{
-	0, // 0: chat.ChatService.ChatStream:input_type -> chat.ChatMessage
-	0, // 1: chat.ChatService.ChatStream:output_type -> chat.ChatMessage
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+var file_chat_chat_proto_depIdxs = []int32{
+	0, // 0: chat.DataChangeEvent.operation:type_name -> chat.Operation
+	3, // 1: chat.DataChangeEvent.timestamp:type_name -> google.protobuf.Timestamp
+	1, // 2: chat.ChatService.StreamDataChanges:input_type -> chat.StreamDataChangesRequest
+	2, // 3: chat.ChatService.StreamDataChanges:output_type -> chat.DataChangeEvent
+	3, // [3:4] is the sub-list for method output_type
+	2, // [2:3] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
-func init() { file_chat_proto_init() }
-func file_chat_proto_init() {
-	if File_chat_proto != nil {
+func init() { file_chat_chat_proto_init() }
+func file_chat_chat_proto_init() {
+	if File_chat_chat_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_chat_proto_rawDesc), len(file_chat_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   1,
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_chat_chat_proto_rawDesc), len(file_chat_chat_proto_rawDesc)),
+			NumEnums:      1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_chat_proto_goTypes,
-		DependencyIndexes: file_chat_proto_depIdxs,
-		MessageInfos:      file_chat_proto_msgTypes,
+		GoTypes:           file_chat_chat_proto_goTypes,
+		DependencyIndexes: file_chat_chat_proto_depIdxs,
+		EnumInfos:         file_chat_chat_proto_enumTypes,
+		MessageInfos:      file_chat_chat_proto_msgTypes,
 	}.Build()
-	File_chat_proto = out.File
-	file_chat_proto_goTypes = nil
-	file_chat_proto_depIdxs = nil
+	File_chat_chat_proto = out.File
+	file_chat_chat_proto_goTypes = nil
+	file_chat_chat_proto_depIdxs = nil
 }

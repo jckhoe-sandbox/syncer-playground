@@ -41,12 +41,12 @@ proto:
 	@echo "Generating protobuf code..."
 	@mkdir -p pkg/chat
 	protoc \
-		--proto_path=proto \
-		--go_out=pkg/chat \
-		--go_opt=paths=source_relative \
-		--go-grpc_out=pkg/chat \
-		--go-grpc_opt=paths=source_relative \
-		proto/chat.proto
+	  --proto_path=proto \
+	  --go_out=pkg \
+	  --go_opt=paths=source_relative \
+	  --go-grpc_out=pkg \
+	  --go-grpc_opt=paths=source_relative \
+	  proto/chat/chat.proto
 
 # Docker build commands
 docker: docker-postgres docker-postgres-redis

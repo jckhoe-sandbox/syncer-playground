@@ -6,13 +6,12 @@ import (
 	"log"
 	"sync"
 
+	"github.com/jckhoe-sandbox/syncer-playground/pkg/chat"
+	"github.com/jckhoe-sandbox/syncer-playground/pkg/config"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-
-	"syncer-playground/pkg/chat"
-	"syncer-playground/pkg/config"
 )
 
 type Client struct {
@@ -24,19 +23,16 @@ type Client struct {
 }
 
 func NewClient(cfg *config.Config) (*Client, error) {
-	// Connect to local PostgreSQL
 	db, err := gorm.Open(postgres.Open(cfg.GetPostgresDSN()), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Connect to PostgreSQL-only server
 	pgOnlyConn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to PostgreSQL-only server: %w", err)
 	}
 
-	// Connect to PostgreSQL + Redis server
 	pgRedisConn, err := grpc.Dial("localhost:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		pgOnlyConn.Close()
@@ -70,7 +66,6 @@ func (c *Client) StreamChanges(ctx context.Context) error {
 	var wg sync.WaitGroup
 	errChan := make(chan error, 2)
 
-	// Stream changes from PostgreSQL-only server
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -88,14 +83,12 @@ func (c *Client) StreamChanges(ctx context.Context) error {
 			}
 
 			log.Printf("Received event from PostgreSQL-only server: %v", event)
-			// Apply changes to local database
 			if err := c.applyChange(event); err != nil {
 				log.Printf("Error applying change from PostgreSQL-only server: %v", err)
 			}
 		}
 	}()
 
-	// Stream changes from PostgreSQL + Redis server
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -113,14 +106,12 @@ func (c *Client) StreamChanges(ctx context.Context) error {
 			}
 
 			log.Printf("Received event from PostgreSQL + Redis server: %v", event)
-			// Apply changes to local database
 			if err := c.applyChange(event); err != nil {
 				log.Printf("Error applying change from PostgreSQL + Redis server: %v", err)
 			}
 		}
 	}()
 
-	// Wait for errors or context cancellation
 	go func() {
 		wg.Wait()
 		close(errChan)
@@ -148,20 +139,17 @@ func (c *Client) applyChange(event *chat.DataChangeEvent) error {
 }
 
 func main() {
-	// Load configuration
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Create client
 	client, err := NewClient(cfg)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 	defer client.Close()
 
-	// Stream changes from both servers
 	if err := client.StreamChanges(context.Background()); err != nil {
 		log.Fatalf("Error streaming changes: %v", err)
 	}
