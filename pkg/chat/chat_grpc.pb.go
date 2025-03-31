@@ -70,19 +70,21 @@ func (x *chatServiceStreamDataChangesClient) Recv() (*DataChangeEvent, error) {
 }
 
 // ChatServiceServer is the server API for ChatService service.
-// All implementations should embed UnimplementedChatServiceServer
+// All implementations must embed UnimplementedChatServiceServer
 // for forward compatibility
 type ChatServiceServer interface {
 	StreamDataChanges(*StreamDataChangesRequest, ChatService_StreamDataChangesServer) error
+	mustEmbedUnimplementedChatServiceServer()
 }
 
-// UnimplementedChatServiceServer should be embedded to have forward compatible implementations.
+// UnimplementedChatServiceServer must be embedded to have forward compatible implementations.
 type UnimplementedChatServiceServer struct {
 }
 
 func (UnimplementedChatServiceServer) StreamDataChanges(*StreamDataChangesRequest, ChatService_StreamDataChangesServer) error {
 	return status.Errorf(codes.Unimplemented, "method StreamDataChanges not implemented")
 }
+func (UnimplementedChatServiceServer) mustEmbedUnimplementedChatServiceServer() {}
 
 // UnsafeChatServiceServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to ChatServiceServer will
