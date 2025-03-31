@@ -21,9 +21,9 @@ clean:
 	$(RM) -rf pkg/chat/*.pb.go
 
 build: proto
-	$(GO) build -o bin/postgres-only $(LDFLAGS) cmd/postgres-only/main.go
-	$(GO) build -o bin/postgres-redis $(LDFLAGS) cmd/postgres-redis/main.go
-	$(GO) build -o bin/client $(LDFLAGS) cmd/client/main.go
+	$(GO) build -o bin/postgres-only $(LDFLAGS) cmd/postgres-only/*.go
+	$(GO) build -o bin/postgres-redis $(LDFLAGS) cmd/postgres-redis/*.go
+	$(GO) build -o bin/client $(LDFLAGS) cmd/client/*.go
 
 run-postgres:
 	$(GO) run $(LDFLAGS) cmd/postgres-only/main.go

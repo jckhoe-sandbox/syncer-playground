@@ -5,11 +5,10 @@ import (
 	"log"
 	"net"
 
+	"github.com/jckhoe-sandbox/syncer-playground/internal/dep"
 	"github.com/jckhoe-sandbox/syncer-playground/pkg/chat"
-	"github.com/jckhoe-sandbox/syncer-playground/pkg/config"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -34,17 +33,14 @@ func (s *server) StreamDataChanges(req *chat.StreamDataChangesRequest, stream ch
 }
 
 func main() {
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
+	InitConfig()
 
-	db, err := gorm.Open(postgres.Open(cfg.GetPostgresDSN()), &gorm.Config{})
+	db, err := dep.NewPostgresDb(config.Db.Hostname, config.Db.Username, config.Db.Password, config.Db.DbName, config.Db.Port)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.Port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Http.Port))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
@@ -55,7 +51,7 @@ func main() {
 	})
 	reflection.Register(s)
 
-	log.Printf("Server listening on port %d", cfg.Server.Port)
+	log.Printf("Server listening on port %d", config.Http.Port)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}

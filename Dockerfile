@@ -15,6 +15,7 @@ RUN go build -o app -ldflags "-X main.AppVersion=${VERSION}" cmd/${APP_NAME}/mai
 FROM alpine
 WORKDIR /app
 COPY --from=build-env /build/app .
+COPY cmd/${APP_NAME}/application.yaml .
 RUN chmod +x app
 
 ENTRYPOINT ["/app/app"] 

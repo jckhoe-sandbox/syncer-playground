@@ -1,0 +1,11 @@
+logLevel: DEBUG
+
+http:
+  port: 8080
+
+db:
+  hostname: localhost
+  username: postgres
+  password: test123
+  port: 5432
+  dbName: postgres
