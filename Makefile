@@ -20,10 +20,10 @@ clean:
 	$(RM) -rf bin/*
 	$(RM) -rf pkg/chat/*.pb.go
 
-build: proto
-	$(GO) build -o bin/postgres-only $(LDFLAGS) cmd/postgres-only/main.go
-	$(GO) build -o bin/postgres-redis $(LDFLAGS) cmd/postgres-redis/main.go
-	$(GO) build -o bin/client $(LDFLAGS) cmd/client/main.go
+build:
+	$(GO) build -o bin/postgres-only $(LDFLAGS) cmd/postgres-only/*.go
+	$(GO) build -o bin/postgres-redis $(LDFLAGS) cmd/postgres-redis/*.go
+	$(GO) build -o bin/client $(LDFLAGS) cmd/client/*.go
 
 run-postgres:
 	$(GO) run $(LDFLAGS) cmd/postgres-only/main.go
@@ -41,15 +41,15 @@ proto:
 	@echo "Generating protobuf code..."
 	@mkdir -p pkg/chat
 	protoc \
-		--proto_path=proto \
-		--go_out=pkg/chat \
-		--go_opt=paths=source_relative \
-		--go-grpc_out=pkg/chat \
-		--go-grpc_opt=paths=source_relative \
-		proto/chat.proto
+	  --proto_path=proto \
+	  --go_out=pkg \
+	  --go_opt=paths=source_relative \
+	  --go-grpc_out=pkg \
+	  --go-grpc_opt=paths=source_relative \
+	  proto/chat/chat.proto
 
 # Docker build commands
-docker: docker-postgres docker-postgres-redis
+docker: docker-postgres docker-postgres-redis docker-client
 
 docker-postgres:
 	$(DOCKER) build \
@@ -60,6 +60,14 @@ docker-postgres:
 		.
 
 docker-postgres-redis:
+	$(DOCKER) build \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg APP_NAME=$(CLIENT_APP) \
+		-t $(CLIENT_APP):$(VERSION) \
+		-t $(CLIENT_APP):latest \
+		.
+
+docker-client:
 	$(DOCKER) build \
 		--build-arg VERSION=$(VERSION) \
 		--build-arg APP_NAME=$(POSTGRES_REDIS_SERVER_APP) \

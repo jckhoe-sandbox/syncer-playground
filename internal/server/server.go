@@ -2,59 +2,107 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 
-	pb "github.com/jckhoe-sandbox/syncer-playground/pkg/chat"
-	"github.com/jackc/pgx/v5"
+	"github.com/jckhoe-sandbox/syncer-playground/pkg/chat"
+	"github.com/jckhoe-sandbox/syncer-playground/pkg/events"
+	"gorm.io/gorm"
 )
 
-type ChatServer struct {
-	pb.UnimplementedChatServiceServer
-	mu       sync.RWMutex
-	clients  map[string]pb.ChatService_StreamChangesServer
-	pgConn   *pgx.Conn
+type Server struct {
+	chat.UnimplementedChatServiceServer
+	db            *gorm.DB
+	eventManager  *events.RedisEventManager
+	eventChannels []chan *chat.DataChangeEvent
+	mu            sync.RWMutex
 }
 
-func NewChatServer() *ChatServer {
-	return &ChatServer{
-		clients: make(map[string]pb.ChatService_StreamChangesServer),
+func NewServer(
+	db *gorm.DB,
+	eventManager *events.RedisEventManager,
+) *Server {
+	return &Server{
+		db:           db,
+		eventManager: eventManager,
 	}
 }
 
-func (s *ChatServer) StreamChanges(req *pb.StreamRequest, stream pb.ChatService_StreamChangesServer) error {
-	clientID := req.GetClientId()
-	log.Printf("New client connected: %s", clientID)
+func (s *Server) StreamDataChanges(req *chat.StreamDataChangesRequest, stream chat.ChatService_StreamDataChangesServer) error {
+	eventChan := make(chan *chat.DataChangeEvent, 100)
 
 	s.mu.Lock()
-	s.clients[clientID] = stream
+	s.eventChannels = append(s.eventChannels, eventChan)
 	s.mu.Unlock()
 
-	// Keep the stream open
-	<-stream.Context().Done()
+	defer func() {
+		s.mu.Lock()
+		for i, ch := range s.eventChannels {
+			if ch == eventChan {
+				s.eventChannels = append(s.eventChannels[:i], s.eventChannels[i+1:]...)
+				break
+			}
+		}
+		s.mu.Unlock()
+		close(eventChan)
+	}()
 
-	s.mu.Lock()
-	delete(s.clients, clientID)
-	s.mu.Unlock()
-
-	log.Printf("Client disconnected: %s", clientID)
-	return nil
-}
-
-func (s *ChatServer) broadcastChange(change *pb.Change) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	for clientID, stream := range s.clients {
-		if err := stream.Send(change); err != nil {
-			log.Printf("Failed to send change to client %s: %v", clientID, err)
+	for {
+		select {
+		case event := <-eventChan:
+			if err := stream.Send(event); err != nil {
+				return fmt.Errorf("failed to send event: %w", err)
+			}
+		case <-stream.Context().Done():
+			return stream.Context().Err()
 		}
 	}
 }
 
-func (s *ChatServer) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.ConnectResponse, error) {
-	return &pb.ConnectResponse{
-		Success: true,
-		Message: "Successfully connected to the server",
-	}, nil
-} 
+func (s *Server) StartRedisSubscriber(ctx context.Context) error {
+	eventChan, err := s.eventManager.SubscribeToEvents(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to Redis events: %w", err)
+	}
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case event := <-eventChan:
+				s.mu.RLock()
+				for _, ch := range s.eventChannels {
+					select {
+					case ch <- event:
+					default:
+						log.Printf("Warning: client channel is full, dropping event")
+					}
+				}
+				s.mu.RUnlock()
+			}
+		}
+	}()
+
+	return nil
+}
+
+func (s *Server) StartPostgresReplicator(ctx context.Context) error {
+	pgEventChan := make(chan *chat.DataChangeEvent, 100)
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case event := <-pgEventChan:
+				if err := s.eventManager.PublishEvent(ctx, event); err != nil {
+					log.Printf("Error publishing event to Redis: %v", err)
+				}
+			}
+		}
+	}()
+
+	return nil
+}

@@ -1,0 +1,11 @@
+logLevel: DEBUG
+
+http:
+  port: 50051
+
+db:
+  hostname: localhost
+  username: postgres
+  password: test123
+  port: 5432
+  dbName: postgres

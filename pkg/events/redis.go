@@ -10,8 +10,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"syncer-playground/pkg/chat"
-	"syncer-playground/pkg/config"
+	"github.com/jckhoe-sandbox/syncer-playground/pkg/chat"
 )
 
 const (
@@ -22,14 +21,13 @@ type RedisEventManager struct {
 	client *redis.Client
 }
 
-func NewRedisEventManager(cfg *config.Config) (*RedisEventManager, error) {
+func NewRedisEventManager(dbIndex, port int, host, password string) (*RedisEventManager, error) {
 	client := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port),
-		Password: cfg.Redis.Password,
-		DB:       cfg.Redis.DB,
+		Addr:     fmt.Sprintf("%s:%d", host, port),
+		Password: password,
+		DB:       1,
 	})
 
-	// Test connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -42,7 +40,6 @@ func NewRedisEventManager(cfg *config.Config) (*RedisEventManager, error) {
 	}, nil
 }
 
-// PublishEvent publishes a data change event to Redis
 func (m *RedisEventManager) PublishEvent(ctx context.Context, event *chat.DataChangeEvent) error {
 	data, err := json.Marshal(event)
 	if err != nil {
@@ -56,12 +53,10 @@ func (m *RedisEventManager) PublishEvent(ctx context.Context, event *chat.DataCh
 	return nil
 }
 
-// SubscribeToEvents subscribes to data change events from Redis
 func (m *RedisEventManager) SubscribeToEvents(ctx context.Context) (<-chan *chat.DataChangeEvent, error) {
 	pubsub := m.client.Subscribe(ctx, dataChangeChannel)
 	eventChan := make(chan *chat.DataChangeEvent, 100)
 
-	// Start subscription in a goroutine
 	go func() {
 		defer pubsub.Close()
 		defer close(eventChan)
@@ -77,7 +72,6 @@ func (m *RedisEventManager) SubscribeToEvents(ctx context.Context) (<-chan *chat
 					continue
 				}
 
-				// Set timestamp if not set
 				if event.Timestamp == nil {
 					event.Timestamp = timestamppb.Now()
 				}
@@ -92,4 +86,4 @@ func (m *RedisEventManager) SubscribeToEvents(ctx context.Context) (<-chan *chat
 
 func (m *RedisEventManager) Close() error {
 	return m.client.Close()
-} 
+}
