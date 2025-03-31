@@ -77,11 +77,10 @@ services:
       - DB_PASSWORD=postgres
       - DB_DBNAME=chat
       - DB_SSLMODE=disable
-      - SYNCER_REDIS_HOST=postgres-redis-redis
-      - SYNCER_REDIS_PORT=6379
-      - SYNCER_REDIS_PASSWORD=
-      - SYNCER_REDIS_DB=0
-      - SYNCER_SERVER_PORT=50051
+      - REDIS_HOST=postgres-redis-redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
     ports:
       - "50052:50051"
     depends_on:
