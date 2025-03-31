@@ -10,8 +10,8 @@ import (
 	"github.com/go-redis/redis/v8"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"syncer-playground/pkg/chat"
-	"syncer-playground/pkg/config"
+	"github.com/jckhoe-sandbox/syncer-playground/pkg/chat"
+	"github.com/jckhoe-sandbox/syncer-playground/pkg/config"
 )
 
 const (
