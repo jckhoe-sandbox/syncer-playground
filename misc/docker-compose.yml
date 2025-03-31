@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL-only server and its database
   postgres-only-db:
@@ -25,15 +23,12 @@ services:
         - VERSION=v0.1.0
         - APP_NAME=postgres-only
     environment:
-      - SYNCER_POSTGRES_HOST=postgres-only-db
-      - SYNCER_POSTGRES_PORT=5432
-      - SYNCER_POSTGRES_USER=postgres
-      - SYNCER_POSTGRES_PASSWORD=postgres
-      - SYNCER_POSTGRES_DBNAME=chat
-      - SYNCER_POSTGRES_SSLMODE=disable
-      - SYNCER_SERVER_PORT=50051
-      - SYNCER_REPLICATION_SLOT=syncer_slot
-      - SYNCER_REPLICATION_PUBLICATION=syncer_pub
+      - DB_HOSTNAME=postgres-only-db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_DBNAME=chat
+      - DB_SSLMODE=disable
     ports:
       - "50051:50051"
     depends_on:
@@ -76,12 +71,12 @@ services:
         - VERSION=v0.1.0
         - APP_NAME=postgres-redis
     environment:
-      - SYNCER_POSTGRES_HOST=postgres-redis-db
-      - SYNCER_POSTGRES_PORT=5432
-      - SYNCER_POSTGRES_USER=postgres
-      - SYNCER_POSTGRES_PASSWORD=postgres
-      - SYNCER_POSTGRES_DBNAME=chat
-      - SYNCER_POSTGRES_SSLMODE=disable
+      - DB_HOSTNAME=postgres-redis-db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_DBNAME=chat
+      - DB_SSLMODE=disable
       - SYNCER_REDIS_HOST=postgres-redis-redis
       - SYNCER_REDIS_PORT=6379
       - SYNCER_REDIS_PASSWORD=
@@ -121,13 +116,12 @@ services:
         - VERSION=v0.1.0
         - APP_NAME=client
     environment:
-      - SYNCER_SERVER_PORT=50051
-      - SYNCER_POSTGRES_HOST=postgres-client-db
-      - SYNCER_POSTGRES_PORT=5432
-      - SYNCER_POSTGRES_USER=postgres
-      - SYNCER_POSTGRES_PASSWORD=postgres
-      - SYNCER_POSTGRES_DBNAME=chat
-      - SYNCER_POSTGRES_SSLMODE=disable
+      - DB_HOSTNAME=postgres-client-db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_DBNAME=chat
+      - DB_SSLMODE=disable
     networks:
       - postgres-only-network
       - postgres-redis-network

@@ -10,9 +10,10 @@ COPY . .
 
 ARG VERSION
 ARG APP_NAME
-RUN go build -o app -ldflags "-X main.AppVersion=${VERSION}" cmd/${APP_NAME}/main.go
+RUN go build -o app -ldflags "-X main.AppVersion=${VERSION}" cmd/${APP_NAME}/*.go
 
 FROM alpine
+ARG APP_NAME
 WORKDIR /app
 COPY --from=build-env /build/app .
 COPY cmd/${APP_NAME}/application.yaml .
